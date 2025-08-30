@@ -1,0 +1,69 @@
+import React from 'react';
+import { 
+  BarChart3, 
+  FileText, 
+  Users, 
+  ShoppingCart, 
+  Receipt, 
+  Package,
+  Settings,
+  LogOut 
+} from 'lucide-react';
+
+interface SidebarProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+const menuItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'quotes', label: 'Quotes', icon: FileText },
+  { id: 'customers', label: 'Customers', icon: Users },
+  { id: 'orders', label: 'Orders', icon: ShoppingCart },
+  { id: 'invoices', label: 'Invoices', icon: Receipt },
+  { id: 'products', label: 'Products', icon: Package },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
+export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+  return (
+    <div className="w-64 bg-white shadow-lg h-screen flex flex-col">
+      <div className="p-6 border-b border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-900">Basirah-Q2C</h1>
+        <p className="text-sm text-gray-600 mt-1">Quote to Cash System</p>
+      </div>
+      
+      <nav className="flex-1 p-4">
+        <ul className="space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => onTabChange(item.id)}
+                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200 hover:bg-blue-50 ${
+                    isActive 
+                      ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600' 
+                      : 'text-gray-700 hover:text-blue-600'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+      
+      <div className="p-4 border-t border-gray-200">
+        <button className="w-full flex items-center px-4 py-3 text-left rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200">
+          <LogOut className="w-5 h-5 mr-3" />
+          <span className="font-medium">Sign Out</span>
+        </button>
+      </div>
+    </div>
+  );
+}
