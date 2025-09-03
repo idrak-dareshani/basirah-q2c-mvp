@@ -1,14 +1,38 @@
 import React from 'react';
+import { Quote, Order, Invoice } from '../../types';
 
-export function SalesChart() {
-  const data = [
-    { month: 'Jan', revenue: 45000, quotes: 12 },
-    { month: 'Feb', revenue: 52000, quotes: 15 },
-    { month: 'Mar', revenue: 48000, quotes: 13 },
-    { month: 'Apr', revenue: 61000, quotes: 18 },
-    { month: 'May', revenue: 55000, quotes: 16 },
-    { month: 'Jun', revenue: 67000, quotes: 20 },
-  ];
+interface SalesChartProps {
+  quotes: Quote[];
+  orders: Order[];
+  invoices: Invoice[];
+}
+
+export function SalesChart({ quotes, orders, invoices }: SalesChartProps) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentYear = new Date().getFullYear();
+  
+  const data = months.map((month, index) => {
+    const monthlyRevenue = invoices
+      .filter(i => {
+        const invoiceDate = new Date(i.createdAt);
+        return i.status === 'paid' && 
+               invoiceDate.getMonth() === index && 
+               invoiceDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, i) => sum + i.total, 0);
+
+    const monthlyQuotes = quotes
+      .filter(q => {
+        const quoteDate = new Date(q.createdAt);
+        return quoteDate.getMonth() === index && quoteDate.getFullYear() === currentYear;
+      }).length;
+
+    return {
+      month,
+      revenue: monthlyRevenue,
+      quotes: monthlyQuotes
+    };
+  }).slice(0, 6); // Show last 6 months
   
   const maxRevenue = Math.max(...data.map(d => d.revenue));
   

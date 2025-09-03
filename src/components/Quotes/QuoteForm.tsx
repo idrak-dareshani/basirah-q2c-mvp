@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Quote, Customer, Product, QuoteItem } from '../../types';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { mockCustomers, mockProducts } from '../../data/mockData';
 
 interface QuoteFormProps {
@@ -10,6 +11,9 @@ interface QuoteFormProps {
 }
 
 export function QuoteForm({ quote, onClose, onSave }: QuoteFormProps) {
+  const [customers] = useLocalStorage<Customer[]>('customers', mockCustomers);
+  const [products] = useLocalStorage<Product[]>('products', mockProducts);
+  
   const [selectedCustomer, setSelectedCustomer] = useState(quote?.customerId || '');
   const [items, setItems] = useState<Partial<QuoteItem>[]>(
     quote?.items || [{ productId: '', quantity: 1, unitPrice: 0, discount: 0 }]
@@ -31,7 +35,7 @@ export function QuoteForm({ quote, onClose, onSave }: QuoteFormProps) {
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     
     if (field === 'productId') {
-      const product = mockProducts.find(p => p.id === value);
+      const product = products.find(p => p.id === value);
       if (product) {
         updatedItems[index].unitPrice = product.price;
       }
@@ -60,9 +64,27 @@ export function QuoteForm({ quote, onClose, onSave }: QuoteFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const customer = customers.find(c => c.id === selectedCustomer);
+    if (!customer) return;
+
+    const processedItems: QuoteItem[] = items.map((item, index) => {
+      const product = products.find(p => p.id === item.productId);
+      return {
+        id: item.id || `item-${index}`,
+        productId: item.productId!,
+        product: product!,
+        quantity: item.quantity!,
+        unitPrice: item.unitPrice!,
+        discount: item.discount || 0,
+        total: calculateItemTotal(item)
+      };
+    });
+
     onSave({
       customerId: selectedCustomer,
-      items: items as QuoteItem[],
+      customer,
+      items: processedItems,
       subtotal: calculateSubtotal(),
       tax: calculateTax(),
       total: calculateTotal(),
@@ -103,7 +125,7 @@ export function QuoteForm({ quote, onClose, onSave }: QuoteFormProps) {
               required
             >
               <option value="">Select a customer</option>
-              {mockCustomers.map((customer) => (
+              {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
                   {customer.name} - {customer.company}
                 </option>
@@ -153,7 +175,7 @@ export function QuoteForm({ quote, onClose, onSave }: QuoteFormProps) {
                       required
                     >
                       <option value="">Select a product</option>
-                      {mockProducts.map((product) => (
+                      {products.map((product) => (
                         <option key={product.id} value={product.id}>
                           {product.name}
                         </option>

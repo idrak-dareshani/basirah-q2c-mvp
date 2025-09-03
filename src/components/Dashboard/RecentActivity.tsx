@@ -1,50 +1,58 @@
 import React from 'react';
 import { FileText, ShoppingCart, Receipt, Clock } from 'lucide-react';
+import { Quote, Order, Invoice } from '../../types';
 
-const activities = [
-  {
-    id: 1,
-    type: 'quote',
-    title: 'Quote Q-2024-045 created',
-    customer: 'TechCorp Solutions',
-    amount: '$15,000',
-    time: '2 hours ago',
-    icon: FileText,
-    color: 'text-blue-600'
-  },
-  {
-    id: 2,
-    type: 'order',
-    title: 'Order ORD-2024-032 confirmed',
-    customer: 'Innovate Industries',
-    amount: '$9,500',
-    time: '4 hours ago',
-    icon: ShoppingCart,
-    color: 'text-emerald-600'
-  },
-  {
-    id: 3,
-    type: 'invoice',
-    title: 'Invoice INV-2024-028 paid',
-    customer: 'GlobalTech Enterprises',
-    amount: '$7,200',
-    time: '1 day ago',
-    icon: Receipt,
-    color: 'text-purple-600'
-  },
-  {
-    id: 4,
-    type: 'quote',
-    title: 'Quote Q-2024-044 expired',
-    customer: 'StartupCo',
-    amount: '$3,800',
-    time: '2 days ago',
-    icon: Clock,
-    color: 'text-amber-600'
-  }
-];
+interface RecentActivityProps {
+  quotes: Quote[];
+  orders: Order[];
+  invoices: Invoice[];
+}
 
-export function RecentActivity() {
+export function RecentActivity({ quotes, orders, invoices }: RecentActivityProps) {
+  const getTimeAgo = (date: string) => {
+    const now = new Date();
+    const past = new Date(date);
+    const diffInHours = Math.floor((now.getTime() - past.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} days ago`;
+  };
+
+  const activities = [
+    ...quotes.slice(-3).map(quote => ({
+      id: `quote-${quote.id}`,
+      type: 'quote',
+      title: `Quote ${quote.quoteNumber} ${quote.status}`,
+      customer: quote.customer.company,
+      amount: `$${quote.total.toLocaleString()}`,
+      time: getTimeAgo(quote.updatedAt),
+      icon: FileText,
+      color: 'text-blue-600'
+    })),
+    ...orders.slice(-2).map(order => ({
+      id: `order-${order.id}`,
+      type: 'order',
+      title: `Order ${order.orderNumber} ${order.status}`,
+      customer: order.customer.company,
+      amount: `$${order.total.toLocaleString()}`,
+      time: getTimeAgo(order.updatedAt),
+      icon: ShoppingCart,
+      color: 'text-emerald-600'
+    })),
+    ...invoices.slice(-2).map(invoice => ({
+      id: `invoice-${invoice.id}`,
+      type: 'invoice',
+      title: `Invoice ${invoice.invoiceNumber} ${invoice.status}`,
+      customer: invoice.customer.company,
+      amount: `$${invoice.total.toLocaleString()}`,
+      time: getTimeAgo(invoice.createdAt),
+      icon: Receipt,
+      color: 'text-purple-600'
+    }))
+  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="mb-6">

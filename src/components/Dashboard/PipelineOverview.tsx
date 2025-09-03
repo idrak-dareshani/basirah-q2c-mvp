@@ -1,11 +1,36 @@
 import React from 'react';
+import { Quote } from '../../types';
 
-export function PipelineOverview() {
+interface PipelineOverviewProps {
+  quotes: Quote[];
+}
+
+export function PipelineOverview({ quotes }: PipelineOverviewProps) {
   const pipelineData = [
-    { stage: 'Draft', count: 8, value: 45000, color: 'bg-gray-400' },
-    { stage: 'Sent', count: 12, value: 67000, color: 'bg-blue-500' },
-    { stage: 'Approved', count: 6, value: 89000, color: 'bg-emerald-500' },
-    { stage: 'Rejected', count: 3, value: 23000, color: 'bg-red-500' },
+    { 
+      stage: 'Draft', 
+      count: quotes.filter(q => q.status === 'draft').length,
+      value: quotes.filter(q => q.status === 'draft').reduce((sum, q) => sum + q.total, 0),
+      color: 'bg-gray-400' 
+    },
+    { 
+      stage: 'Sent', 
+      count: quotes.filter(q => q.status === 'sent').length,
+      value: quotes.filter(q => q.status === 'sent').reduce((sum, q) => sum + q.total, 0),
+      color: 'bg-blue-500' 
+    },
+    { 
+      stage: 'Approved', 
+      count: quotes.filter(q => q.status === 'approved').length,
+      value: quotes.filter(q => q.status === 'approved').reduce((sum, q) => sum + q.total, 0),
+      color: 'bg-emerald-500' 
+    },
+    { 
+      stage: 'Rejected', 
+      count: quotes.filter(q => q.status === 'rejected').length,
+      value: quotes.filter(q => q.status === 'rejected').reduce((sum, q) => sum + q.total, 0),
+      color: 'bg-red-500' 
+    },
   ];
   
   const totalValue = pipelineData.reduce((sum, stage) => sum + stage.value, 0);
