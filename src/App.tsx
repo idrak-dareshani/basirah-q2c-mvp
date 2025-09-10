@@ -44,7 +44,7 @@ function App() {
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
-        <main className="flex-1 p-6 pt-18">
+        <main className="flex-1 p-6 pt-10">
           {renderContent()}
         </main>
       </div>
