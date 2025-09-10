@@ -14,7 +14,7 @@ export function Header({ title, subtitle, onToggleSidebar }: HeaderProps) {
         <div className="flex items-center space-x-4">
           <button
             onClick={onToggleSidebar}
-            className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 flex items-center justify-center"
+            className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-100 rounded-lg border border-gray-300 hover:border-blue-300 transition-all duration-200 flex items-center justify-center"
           >
             <Menu className="w-5 h-5" />
           </button>

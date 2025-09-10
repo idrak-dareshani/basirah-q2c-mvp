@@ -31,7 +31,7 @@ const menuItems = [
 export function Sidebar({ activeTab, onTabChange, isCollapsed, onToggleCollapse }: SidebarProps) {
   return (
     <div className={`fixed left-0 top-16 z-30 ${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg h-[calc(100vh-4rem)] flex flex-col transition-all duration-300`}>
-      <nav className="flex-1 p-2 overflow-y-auto">
+      <nav className="flex-1 pt-4 p-2 overflow-y-auto">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
