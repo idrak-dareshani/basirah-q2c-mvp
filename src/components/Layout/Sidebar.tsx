@@ -31,7 +31,7 @@ const menuItems = [
 export function Sidebar({ activeTab, onTabChange, isCollapsed, onToggleCollapse }: SidebarProps) {
   return (
     <div className={`fixed left-0 top-0 z-30 ${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg h-screen flex flex-col transition-all duration-300`}>
-      <div className={`${isCollapsed ? 'p-4' : 'p-6'} border-b border-gray-200 flex items-center justify-end`}>
+      <div className={`${isCollapsed ? 'p-3' : 'p-4'} border-b border-gray-200 flex items-center justify-end`}>
         <button
           onClick={onToggleCollapse}
           className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
@@ -44,7 +44,7 @@ export function Sidebar({ activeTab, onTabChange, isCollapsed, onToggleCollapse 
         </button>
       </div>
       
-      <nav className="flex-1 p-4 mt-20">
+      <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
