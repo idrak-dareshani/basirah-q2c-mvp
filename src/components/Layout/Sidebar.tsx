@@ -30,11 +30,11 @@ const menuItems = [
 
 export function Sidebar({ activeTab, onTabChange, isCollapsed, onToggleCollapse }: SidebarProps) {
   return (
-    <div className={`fixed left-0 top-0 z-30 ${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg h-screen flex flex-col transition-all duration-300`}>
-      <div className={`${isCollapsed ? 'p-3' : 'p-4'} border-b border-gray-200 flex items-center ${isCollapsed ? 'justify-center' : 'justify-end'}`}>
+    <div className={`fixed left-0 top-16 z-30 ${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg h-[calc(100vh-4rem)] flex flex-col transition-all duration-300`}>
+      <div className={`${isCollapsed ? 'p-2' : 'p-4'} border-b border-gray-200 flex items-center ${isCollapsed ? 'justify-center' : 'justify-end'} bg-gray-50`}>
         <button
           onClick={onToggleCollapse}
-          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 flex items-center justify-center"
+          className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 flex items-center justify-center border border-gray-300 bg-white shadow-sm"
         >
           {isCollapsed ? (
             <ChevronRight className="w-5 h-5" />
@@ -44,7 +44,7 @@ export function Sidebar({ activeTab, onTabChange, isCollapsed, onToggleCollapse 
         </button>
       </div>
       
-      <nav className="flex-1 p-2">
+      <nav className="flex-1 p-2 overflow-y-auto">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
