@@ -13,18 +13,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const getPageInfo = () => {
-    switch (activeTab) {
-      case 'dashboard': return { title: 'Basirah-Q2C', subtitle: 'Quote to Cash System' };
-      case 'quotes': return { title: 'Quotes', subtitle: 'Manage your sales quotes and proposals' };
-      case 'customers': return { title: 'Customers', subtitle: 'Manage your customer relationships' };
-      case 'orders': return { title: 'Orders', subtitle: 'Track and manage customer orders' };
-      case 'invoices': return { title: 'Invoices', subtitle: 'Manage billing and payment collection' };
-      case 'products': return { title: 'Products & Services', subtitle: 'Manage your product catalog and pricing' };
-      case 'settings': return { title: 'Settings', subtitle: 'Configure your account and system preferences' };
-      default: return { title: 'Basirah-Q2C', subtitle: 'Quote to Cash System' };
-    }
-  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -39,7 +27,6 @@ function App() {
     }
   };
 
-  const pageInfo = getPageInfo();
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -51,7 +38,7 @@ function App() {
       />
       
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <Header title={pageInfo.title} subtitle={pageInfo.subtitle} />
+        <Header title="Basirah-Q2C" subtitle="Quote to Cash System" />
         
         <main className="flex-1 p-6 pt-24">
           {renderContent()}
