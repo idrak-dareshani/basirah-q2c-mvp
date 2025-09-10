@@ -30,11 +30,11 @@ const menuItems = [
 
 export function Sidebar({ activeTab, onTabChange, isCollapsed, onToggleCollapse }: SidebarProps) {
   return (
-    <div className={`fixed left-0 top-16 z-30 ${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg h-[calc(100vh-4rem)] flex flex-col transition-all duration-300`}>
-      <div className={`${isCollapsed ? 'p-2' : 'p-4'} border-b border-gray-200 flex items-center ${isCollapsed ? 'justify-center' : 'justify-end'} bg-gray-50`}>
+    <div className={`fixed left-0 top-20 z-30 ${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg h-[calc(100vh-5rem)] flex flex-col transition-all duration-300`}>
+      <div className={`${isCollapsed ? 'p-2' : 'p-4'} border-b border-gray-200 flex items-center justify-center bg-gray-50`}>
         <button
           onClick={onToggleCollapse}
-          className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 flex items-center justify-center border border-gray-300 bg-white shadow-sm"
+          className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 flex items-center justify-center border border-gray-300 bg-white shadow-sm w-8 h-8"
         >
           {isCollapsed ? (
             <ChevronRight className="w-5 h-5" />
