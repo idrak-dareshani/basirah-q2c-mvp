@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Order, Quote } from '../../types';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { mockQuotes } from '../../data/mockData';
+import { useSupabaseQuery } from '../../hooks/useSupabase';
 
 interface OrderFormProps {
   order?: Order | null;
@@ -10,9 +9,59 @@ interface OrderFormProps {
 }
 
 export function OrderForm({ order, onSave, onCancel }: OrderFormProps) {
-  const [quotes] = useLocalStorage<Quote[]>('quotes', mockQuotes);
+  const { data: quotesData } = useSupabaseQuery<any>(
+    'q2c_quotes',
+    `
+      *,
+      customer:q2c_customers(*),
+      items:q2c_quote_items(
+        *,
+        product:q2c_products(*)
+      )
+    `,
+    []
+  );
   const [selectedQuoteId, setSelectedQuoteId] = useState(order?.quoteId || '');
   const [status, setStatus] = useState<Order['status']>(order?.status || 'pending');
+
+  // Transform quotes data
+  const quotes: Quote[] = quotesData.map((quote: any) => ({
+    id: quote.id,
+    quoteNumber: quote.quote_number,
+    customerId: quote.customer_id,
+    customer: {
+      id: quote.customer.id,
+      name: quote.customer.name,
+      email: quote.customer.email,
+      phone: quote.customer.phone,
+      company: quote.customer.company,
+      address: quote.customer.address,
+      createdAt: quote.customer.created_at
+    },
+    items: quote.items.map((item: any) => ({
+      id: item.id,
+      productId: item.product_id,
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        description: item.product.description,
+        price: item.product.price,
+        category: item.product.category,
+        sku: item.product.sku
+      },
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      discount: item.discount,
+      total: item.total
+    })),
+    subtotal: quote.subtotal,
+    tax: quote.tax,
+    total: quote.total,
+    status: quote.status,
+    validUntil: quote.valid_until,
+    createdAt: quote.created_at,
+    updatedAt: quote.updated_at
+  }));
 
   const selectedQuote = quotes.find(q => q.id === selectedQuoteId);
   const approvedQuotes = quotes.filter(q => q.status === 'approved');

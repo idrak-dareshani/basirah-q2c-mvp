@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Invoice, Order } from '../../types';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { mockOrders } from '../../data/mockData';
+import { useSupabaseQuery } from '../../hooks/useSupabase';
 
 interface InvoiceFormProps {
   invoice?: Invoice | null;
@@ -10,12 +9,62 @@ interface InvoiceFormProps {
 }
 
 export function InvoiceForm({ invoice, onSave, onCancel }: InvoiceFormProps) {
-  const [orders] = useLocalStorage<Order[]>('orders', mockOrders);
+  const { data: ordersData } = useSupabaseQuery<any>(
+    'q2c_orders',
+    `
+      *,
+      customer:q2c_customers(*),
+      quote:q2c_quotes(
+        items:q2c_quote_items(
+          *,
+          product:q2c_products(*)
+        )
+      )
+    `,
+    []
+  );
   const [selectedOrderId, setSelectedOrderId] = useState(invoice?.orderId || '');
   const [status, setStatus] = useState<Invoice['status']>(invoice?.status || 'draft');
   const [dueDate, setDueDate] = useState(
     invoice?.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : ''
   );
+
+  // Transform orders data
+  const orders: Order[] = ordersData.map((order: any) => ({
+    id: order.id,
+    orderNumber: order.order_number,
+    quoteId: order.quote_id,
+    customerId: order.customer_id,
+    customer: {
+      id: order.customer.id,
+      name: order.customer.name,
+      email: order.customer.email,
+      phone: order.customer.phone,
+      company: order.customer.company,
+      address: order.customer.address,
+      createdAt: order.customer.created_at
+    },
+    items: order.quote.items.map((item: any) => ({
+      id: item.id,
+      productId: item.product_id,
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        description: item.product.description,
+        price: item.product.price,
+        category: item.product.category,
+        sku: item.product.sku
+      },
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      discount: item.discount,
+      total: item.total
+    })),
+    total: order.total,
+    status: order.status,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at
+  }));
 
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
   const availableOrders = orders.filter(o => o.status === 'confirmed' || o.status === 'delivered');

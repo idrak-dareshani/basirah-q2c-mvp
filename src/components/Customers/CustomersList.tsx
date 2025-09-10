@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Trash2, Mail, Phone } from 'lucide-react';
 import { Customer } from '../../types';
-import { mockCustomers } from '../../data/mockData';
 import { Modal } from '../UI/Modal';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
 import { CustomerForm } from './CustomerForm';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 
 export function CustomersList() {
-  const [customers, setCustomers] = useLocalStorage<Customer[]>('customers', mockCustomers);
+  const { data: customers, loading, error, refetch } = useSupabaseQuery<Customer>('q2c_customers');
+  const { insert, update, remove, loading: mutationLoading } = useSupabaseMutation<Customer>('q2c_customers');
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -24,23 +24,15 @@ export function CustomersList() {
     setShowForm(true);
   };
 
-  const handleSaveCustomer = (customerData: Omit<Customer, 'id' | 'createdAt'>) => {
+  const handleSaveCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt'>) => {
     if (editingCustomer) {
       // Update existing customer
-      setCustomers(prev => prev.map(c => 
-        c.id === editingCustomer.id 
-          ? { ...c, ...customerData }
-          : c
-      ));
+      await update(editingCustomer.id, customerData);
     } else {
       // Create new customer
-      const newCustomer: Customer = {
-        id: Date.now().toString(),
-        ...customerData,
-        createdAt: new Date().toISOString()
-      };
-      setCustomers(prev => [...prev, newCustomer]);
+      await insert(customerData);
     }
+    await refetch();
     setShowForm(false);
     setEditingCustomer(null);
   };
@@ -50,13 +42,36 @@ export function CustomersList() {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (customerToDelete) {
-      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
+      await remove(customerToDelete.id);
+      await refetch();
       setShowDeleteDialog(false);
       setCustomerToDelete(null);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800">Error loading customers: {error}</p>
+        <button 
+          onClick={refetch}
+          className="mt-2 text-red-600 hover:text-red-800 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -68,7 +83,8 @@ export function CustomersList() {
           </div>
           <button 
             onClick={handleCreateCustomer}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50"
+            disabled={mutationLoading}
           >
             <Plus className="w-4 h-4" />
             <span>Add Customer</span>
@@ -118,7 +134,7 @@ export function CustomersList() {
             
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-xs text-gray-500">
-                  Customer since {new Date(customer.createdAt).toLocaleDateString()}
+                  Customer since {new Date(customer.created_at).toLocaleDateString()}
                 </p>
               </div>
             </div>

@@ -1,34 +1,33 @@
 import React from 'react';
-import { Quote } from '../../types';
 
 interface PipelineOverviewProps {
-  quotes: Quote[];
+  quotesData: any[];
 }
 
-export function PipelineOverview({ quotes }: PipelineOverviewProps) {
+export function PipelineOverview({ quotesData }: PipelineOverviewProps) {
   const pipelineData = [
     { 
       stage: 'Draft', 
-      count: quotes.filter(q => q.status === 'draft').length,
-      value: quotes.filter(q => q.status === 'draft').reduce((sum, q) => sum + q.total, 0),
+      count: quotesData.filter((q: any) => q.status === 'draft').length,
+      value: quotesData.filter((q: any) => q.status === 'draft').reduce((sum: number, q: any) => sum + q.total, 0),
       color: 'bg-gray-400' 
     },
     { 
       stage: 'Sent', 
-      count: quotes.filter(q => q.status === 'sent').length,
-      value: quotes.filter(q => q.status === 'sent').reduce((sum, q) => sum + q.total, 0),
+      count: quotesData.filter((q: any) => q.status === 'sent').length,
+      value: quotesData.filter((q: any) => q.status === 'sent').reduce((sum: number, q: any) => sum + q.total, 0),
       color: 'bg-blue-500' 
     },
     { 
       stage: 'Approved', 
-      count: quotes.filter(q => q.status === 'approved').length,
-      value: quotes.filter(q => q.status === 'approved').reduce((sum, q) => sum + q.total, 0),
+      count: quotesData.filter((q: any) => q.status === 'approved').length,
+      value: quotesData.filter((q: any) => q.status === 'approved').reduce((sum: number, q: any) => sum + q.total, 0),
       color: 'bg-emerald-500' 
     },
     { 
       stage: 'Rejected', 
-      count: quotes.filter(q => q.status === 'rejected').length,
-      value: quotes.filter(q => q.status === 'rejected').reduce((sum, q) => sum + q.total, 0),
+      count: quotesData.filter((q: any) => q.status === 'rejected').length,
+      value: quotesData.filter((q: any) => q.status === 'rejected').reduce((sum: number, q: any) => sum + q.total, 0),
       color: 'bg-red-500' 
     },
   ];

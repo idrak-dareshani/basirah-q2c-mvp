@@ -1,18 +1,68 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Trash2, Send } from 'lucide-react';
 import { Quote } from '../../types';
-import { mockQuotes } from '../../data/mockData';
 import { QuoteForm } from './QuoteForm';
 import { Modal } from '../UI/Modal';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
+import { supabase } from '../../lib/supabase';
 
 export function QuotesList() {
-  const [quotes, setQuotes] = useLocalStorage<Quote[]>('quotes', mockQuotes);
+  const { data: quotesData, loading, error, refetch } = useSupabaseQuery<any>(
+    'q2c_quotes',
+    `
+      *,
+      customer:q2c_customers(*),
+      items:q2c_quote_items(
+        *,
+        product:q2c_products(*)
+      )
+    `
+  );
+  const { update, remove, loading: mutationLoading } = useSupabaseMutation('q2c_quotes');
   const [showForm, setShowForm] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
+
+  // Transform Supabase data to match our Quote interface
+  const quotes: Quote[] = quotesData.map((quote: any) => ({
+    id: quote.id,
+    quoteNumber: quote.quote_number,
+    customerId: quote.customer_id,
+    customer: {
+      id: quote.customer.id,
+      name: quote.customer.name,
+      email: quote.customer.email,
+      phone: quote.customer.phone,
+      company: quote.customer.company,
+      address: quote.customer.address,
+      createdAt: quote.customer.created_at
+    },
+    items: quote.items.map((item: any) => ({
+      id: item.id,
+      productId: item.product_id,
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        description: item.product.description,
+        price: item.product.price,
+        category: item.product.category,
+        sku: item.product.sku
+      },
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      discount: item.discount,
+      total: item.total
+    })),
+    subtotal: quote.subtotal,
+    tax: quote.tax,
+    total: quote.total,
+    status: quote.status,
+    validUntil: quote.valid_until,
+    createdAt: quote.created_at,
+    updatedAt: quote.updated_at
+  }));
 
   const getStatusColor = (status: Quote['status']) => {
     switch (status) {
@@ -35,25 +85,83 @@ export function QuotesList() {
     setShowForm(true);
   };
 
-  const handleSaveQuote = (quoteData: Partial<Quote>) => {
-    if (editingQuote) {
-      // Update existing quote
-      setQuotes(prev => prev.map(q => 
-        q.id === editingQuote.id 
-          ? { ...q, ...quoteData, updatedAt: new Date().toISOString() }
-          : q
-      ));
-    } else {
-      // Create new quote
-      const newQuote: Quote = {
-        id: Date.now().toString(),
-        quoteNumber: `Q-${new Date().getFullYear()}-${String(quotes.length + 1).padStart(3, '0')}`,
-        ...quoteData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      } as Quote;
-      setQuotes(prev => [...prev, newQuote]);
+  const handleSaveQuote = async (quoteData: Partial<Quote>) => {
+    try {
+      if (editingQuote) {
+        // Update existing quote
+        await update(editingQuote.id, {
+          customer_id: quoteData.customerId,
+          subtotal: quoteData.subtotal,
+          tax: quoteData.tax,
+          total: quoteData.total,
+          valid_until: quoteData.validUntil,
+          status: quoteData.status
+        });
+
+        // Update quote items
+        if (quoteData.items) {
+          // Delete existing items
+          await supabase
+            .from('q2c_quote_items')
+            .delete()
+            .eq('quote_id', editingQuote.id);
+
+          // Insert new items
+          const itemsToInsert = quoteData.items.map(item => ({
+            quote_id: editingQuote.id,
+            product_id: item.productId,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            discount: item.discount,
+            total: item.total
+          }));
+
+          await supabase
+            .from('q2c_quote_items')
+            .insert(itemsToInsert);
+        }
+      } else {
+        // Create new quote
+        const quoteNumber = `Q-${new Date().getFullYear()}-${String(quotes.length + 1).padStart(3, '0')}`;
+        
+        const { data: newQuote, error } = await supabase
+          .from('q2c_quotes')
+          .insert({
+            quote_number: quoteNumber,
+            customer_id: quoteData.customerId,
+            subtotal: quoteData.subtotal,
+            tax: quoteData.tax,
+            total: quoteData.total,
+            valid_until: quoteData.validUntil,
+            status: quoteData.status
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Insert quote items
+        if (quoteData.items && newQuote) {
+          const itemsToInsert = quoteData.items.map(item => ({
+            quote_id: newQuote.id,
+            product_id: item.productId,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            discount: item.discount,
+            total: item.total
+          }));
+
+          await supabase
+            .from('q2c_quote_items')
+            .insert(itemsToInsert);
+        }
+      }
+      
+      await refetch();
+    } catch (error) {
+      console.error('Error saving quote:', error);
     }
+    
     setShowForm(false);
     setEditingQuote(null);
   };
@@ -63,21 +171,41 @@ export function QuotesList() {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (quoteToDelete) {
-      setQuotes(prev => prev.filter(q => q.id !== quoteToDelete.id));
+      await remove(quoteToDelete.id);
+      await refetch();
       setShowDeleteDialog(false);
       setQuoteToDelete(null);
     }
   };
 
-  const handleStatusChange = (quoteId: string, newStatus: Quote['status']) => {
-    setQuotes(prev => prev.map(q => 
-      q.id === quoteId 
-        ? { ...q, status: newStatus, updatedAt: new Date().toISOString() }
-        : q
-    ));
+  const handleStatusChange = async (quoteId: string, newStatus: Quote['status']) => {
+    await update(quoteId, { status: newStatus });
+    await refetch();
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800">Error loading quotes: {error}</p>
+        <button 
+          onClick={refetch}
+          className="mt-2 text-red-600 hover:text-red-800 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -89,7 +217,8 @@ export function QuotesList() {
           </div>
           <button
             onClick={handleCreateQuote}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50"
+            disabled={mutationLoading}
           >
             <Plus className="w-4 h-4" />
             <span>New Quote</span>

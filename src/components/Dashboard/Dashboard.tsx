@@ -4,48 +4,51 @@ import { RecentActivity } from './RecentActivity';
 import { SalesChart } from './SalesChart';
 import { PipelineOverview } from './PipelineOverview';
 import { FileText, ShoppingCart, DollarSign, Clock } from 'lucide-react';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { mockQuotes, mockOrders, mockInvoices } from '../../data/mockData';
+import { useSupabaseQuery } from '../../hooks/useSupabase';
 import { Quote, Order, Invoice } from '../../types';
 
 export function Dashboard() {
-  const [quotes] = useLocalStorage<Quote[]>('quotes', mockQuotes);
-  const [orders] = useLocalStorage<Order[]>('orders', mockOrders);
-  const [invoices] = useLocalStorage<Invoice[]>('invoices', mockInvoices);
+  const { data: quotesData } = useSupabaseQuery<any>('q2c_quotes', '*');
+  const { data: ordersData } = useSupabaseQuery<any>('q2c_orders', '*');
+  const { data: invoicesData } = useSupabaseQuery<any>('q2c_invoices', '*');
+
+  // Transform data for calculations
+  const quotes = quotesData.length;
+  const orders = ordersData.length;
 
   // Calculate real-time stats
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  const quotesThisMonth = quotes.filter(q => {
-    const quoteDate = new Date(q.createdAt);
+  const quotesThisMonth = quotesData.filter((q: any) => {
+    const quoteDate = new Date(q.created_at);
     return quoteDate.getMonth() === currentMonth && quoteDate.getFullYear() === currentYear;
   }).length;
 
-  const ordersThisMonth = orders.filter(o => {
-    const orderDate = new Date(o.createdAt);
+  const ordersThisMonth = ordersData.filter((o: any) => {
+    const orderDate = new Date(o.created_at);
     return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
   }).length;
 
-  const totalRevenue = invoices
-    .filter(i => i.status === 'paid')
-    .reduce((sum, i) => sum + i.total, 0);
+  const totalRevenue = invoicesData
+    .filter((i: any) => i.status === 'paid')
+    .reduce((sum: number, i: any) => sum + i.total, 0);
 
-  const revenueThisMonth = invoices
-    .filter(i => {
-      const invoiceDate = new Date(i.createdAt);
+  const revenueThisMonth = invoicesData
+    .filter((i: any) => {
+      const invoiceDate = new Date(i.created_at);
       return i.status === 'paid' && 
              invoiceDate.getMonth() === currentMonth && 
              invoiceDate.getFullYear() === currentYear;
     })
-    .reduce((sum, i) => sum + i.total, 0);
+    .reduce((sum: number, i: any) => sum + i.total, 0);
 
-  const pendingPayments = invoices
-    .filter(i => i.status === 'sent' || i.status === 'overdue')
-    .reduce((sum, i) => sum + i.total, 0);
+  const pendingPayments = invoicesData
+    .filter((i: any) => i.status === 'sent' || i.status === 'overdue')
+    .reduce((sum: number, i: any) => sum + i.total, 0);
 
-  const conversionRate = quotes.length > 0 
-    ? (orders.length / quotes.length) * 100 
+  const conversionRate = quotes > 0 
+    ? (orders / quotes) * 100 
     : 0;
   
   return (
@@ -53,7 +56,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Quotes"
-          value={quotes.length}
+          value={quotes}
           change={`+${quotesThisMonth} this month`}
           changeType="positive"
           icon={FileText}
@@ -61,7 +64,7 @@ export function Dashboard() {
         />
         <StatsCard
           title="Active Orders"
-          value={orders.length}
+          value={orders}
           change={`+${ordersThisMonth} this month`}
           changeType="positive"
           icon={ShoppingCart}
@@ -86,11 +89,11 @@ export function Dashboard() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SalesChart quotes={quotes} orders={orders} invoices={invoices} />
-        <PipelineOverview quotes={quotes} />
+        <SalesChart quotesData={quotesData} ordersData={ordersData} invoicesData={invoicesData} />
+        <PipelineOverview quotesData={quotesData} />
       </div>
       
-      <RecentActivity quotes={quotes} orders={orders} invoices={invoices} />
+      <RecentActivity quotesData={quotesData} ordersData={ordersData} invoicesData={invoicesData} />
     </div>
   );
 }

@@ -1,29 +1,28 @@
 import React from 'react';
-import { Quote, Order, Invoice } from '../../types';
 
 interface SalesChartProps {
-  quotes: Quote[];
-  orders: Order[];
-  invoices: Invoice[];
+  quotesData: any[];
+  ordersData: any[];
+  invoicesData: any[];
 }
 
-export function SalesChart({ quotes, orders, invoices }: SalesChartProps) {
+export function SalesChart({ quotesData, ordersData, invoicesData }: SalesChartProps) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const currentYear = new Date().getFullYear();
   
   const data = months.map((month, index) => {
-    const monthlyRevenue = invoices
-      .filter(i => {
-        const invoiceDate = new Date(i.createdAt);
+    const monthlyRevenue = invoicesData
+      .filter((i: any) => {
+        const invoiceDate = new Date(i.created_at);
         return i.status === 'paid' && 
                invoiceDate.getMonth() === index && 
                invoiceDate.getFullYear() === currentYear;
       })
-      .reduce((sum, i) => sum + i.total, 0);
+      .reduce((sum: number, i: any) => sum + i.total, 0);
 
-    const monthlyQuotes = quotes
-      .filter(q => {
-        const quoteDate = new Date(q.createdAt);
+    const monthlyQuotes = quotesData
+      .filter((q: any) => {
+        const quoteDate = new Date(q.created_at);
         return quoteDate.getMonth() === index && quoteDate.getFullYear() === currentYear;
       }).length;
 

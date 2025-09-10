@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { Product } from '../../types';
-import { mockProducts } from '../../data/mockData';
 import { Modal } from '../UI/Modal';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
 import { ProductForm } from './ProductForm';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 
 export function ProductsList() {
-  const [products, setProducts] = useLocalStorage<Product[]>('products', mockProducts);
+  const { data: products, loading, error, refetch } = useSupabaseQuery<Product>('q2c_products');
+  const { insert, update, remove, loading: mutationLoading } = useSupabaseMutation<Product>('q2c_products');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -34,22 +34,15 @@ export function ProductsList() {
     setShowForm(true);
   };
 
-  const handleSaveProduct = (productData: Omit<Product, 'id'>) => {
+  const handleSaveProduct = async (productData: Omit<Product, 'id'>) => {
     if (editingProduct) {
       // Update existing product
-      setProducts(prev => prev.map(p => 
-        p.id === editingProduct.id 
-          ? { ...p, ...productData }
-          : p
-      ));
+      await update(editingProduct.id, productData);
     } else {
       // Create new product
-      const newProduct: Product = {
-        id: Date.now().toString(),
-        ...productData
-      };
-      setProducts(prev => [...prev, newProduct]);
+      await insert(productData);
     }
+    await refetch();
     setShowForm(false);
     setEditingProduct(null);
   };
@@ -59,13 +52,36 @@ export function ProductsList() {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (productToDelete) {
-      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      await remove(productToDelete.id);
+      await refetch();
       setShowDeleteDialog(false);
       setProductToDelete(null);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800">Error loading products: {error}</p>
+        <button 
+          onClick={refetch}
+          className="mt-2 text-red-600 hover:text-red-800 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -77,7 +93,8 @@ export function ProductsList() {
           </div>
           <button 
             onClick={handleCreateProduct}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50"
+            disabled={mutationLoading}
           >
             <Plus className="w-4 h-4" />
             <span>Add Product</span>

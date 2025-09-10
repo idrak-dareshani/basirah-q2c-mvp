@@ -1,18 +1,71 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Send, DollarSign, Download, Trash2 } from 'lucide-react';
 import { Invoice } from '../../types';
-import { mockInvoices } from '../../data/mockData';
 import { Modal } from '../UI/Modal';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
 import { InvoiceForm } from './InvoiceForm';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 
 export function InvoicesList() {
-  const [invoices, setInvoices] = useLocalStorage<Invoice[]>('invoices', mockInvoices);
+  const { data: invoicesData, loading, error, refetch } = useSupabaseQuery<any>(
+    'q2c_invoices',
+    `
+      *,
+      customer:q2c_customers(*),
+      order:q2c_orders(
+        *,
+        quote:q2c_quotes(
+          items:q2c_quote_items(
+            *,
+            product:q2c_products(*)
+          )
+        )
+      )
+    `
+  );
+  const { insert, update, remove, loading: mutationLoading } = useSupabaseMutation('q2c_invoices');
   const [showForm, setShowForm] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+
+  // Transform Supabase data to match our Invoice interface
+  const invoices: Invoice[] = invoicesData.map((invoice: any) => ({
+    id: invoice.id,
+    invoiceNumber: invoice.invoice_number,
+    orderId: invoice.order_id,
+    customerId: invoice.customer_id,
+    customer: {
+      id: invoice.customer.id,
+      name: invoice.customer.name,
+      email: invoice.customer.email,
+      phone: invoice.customer.phone,
+      company: invoice.customer.company,
+      address: invoice.customer.address,
+      createdAt: invoice.customer.created_at
+    },
+    items: invoice.order.quote.items.map((item: any) => ({
+      id: item.id,
+      productId: item.product_id,
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        description: item.product.description,
+        price: item.product.price,
+        category: item.product.category,
+        sku: item.product.sku
+      },
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      discount: item.discount,
+      total: item.total
+    })),
+    total: invoice.total,
+    status: invoice.status,
+    dueDate: invoice.due_date,
+    createdAt: invoice.created_at,
+    paidAt: invoice.paid_at
+  }));
 
   const getStatusColor = (status: Invoice['status']) => {
     switch (status) {
@@ -35,23 +88,27 @@ export function InvoicesList() {
     setShowForm(true);
   };
 
-  const handleSaveInvoice = (invoiceData: Omit<Invoice, 'id' | 'createdAt'>) => {
+  const handleSaveInvoice = async (invoiceData: Omit<Invoice, 'id' | 'createdAt'>) => {
     if (editingInvoice) {
       // Update existing invoice
-      setInvoices(prev => prev.map(i => 
-        i.id === editingInvoice.id 
-          ? { ...i, ...invoiceData }
-          : i
-      ));
+      await update(editingInvoice.id, {
+        status: invoiceData.status,
+        due_date: invoiceData.dueDate,
+        paid_at: invoiceData.paidAt
+      });
     } else {
       // Create new invoice
-      const newInvoice: Invoice = {
-        id: Date.now().toString(),
-        ...invoiceData,
-        createdAt: new Date().toISOString()
-      };
-      setInvoices(prev => [...prev, newInvoice]);
+      await insert({
+        invoice_number: invoiceData.invoiceNumber,
+        order_id: invoiceData.orderId,
+        customer_id: invoiceData.customerId,
+        total: invoiceData.total,
+        status: invoiceData.status,
+        due_date: invoiceData.dueDate,
+        paid_at: invoiceData.paidAt
+      });
     }
+    await refetch();
     setShowForm(false);
     setEditingInvoice(null);
   };
@@ -61,25 +118,44 @@ export function InvoicesList() {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (invoiceToDelete) {
-      setInvoices(prev => prev.filter(i => i.id !== invoiceToDelete.id));
+      await remove(invoiceToDelete.id);
+      await refetch();
       setShowDeleteDialog(false);
       setInvoiceToDelete(null);
     }
   };
 
-  const handleStatusChange = (invoiceId: string, newStatus: Invoice['status']) => {
-    setInvoices(prev => prev.map(i => 
-      i.id === invoiceId 
-        ? { 
-            ...i, 
-            status: newStatus, 
-            paidAt: newStatus === 'paid' ? new Date().toISOString() : i.paidAt 
-          }
-        : i
-    ));
+  const handleStatusChange = async (invoiceId: string, newStatus: Invoice['status']) => {
+    await update(invoiceId, {
+      status: newStatus,
+      paid_at: newStatus === 'paid' ? new Date().toISOString() : null
+    });
+    await refetch();
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800">Error loading invoices: {error}</p>
+        <button 
+          onClick={refetch}
+          className="mt-2 text-red-600 hover:text-red-800 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -91,7 +167,8 @@ export function InvoicesList() {
           </div>
           <button 
             onClick={handleCreateInvoice}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50"
+            disabled={mutationLoading}
           >
             <Plus className="w-4 h-4" />
             <span>New Invoice</span>

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Quote, Customer, Product, QuoteItem } from '../../types';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { mockCustomers, mockProducts } from '../../data/mockData';
+import { useSupabaseQuery } from '../../hooks/useSupabase';
 
 interface QuoteFormProps {
   quote?: Quote | null;
@@ -11,8 +10,8 @@ interface QuoteFormProps {
 }
 
 export function QuoteForm({ quote, onClose, onSave }: QuoteFormProps) {
-  const [customers] = useLocalStorage<Customer[]>('customers', mockCustomers);
-  const [products] = useLocalStorage<Product[]>('products', mockProducts);
+  const { data: customers } = useSupabaseQuery<Customer>('q2c_customers');
+  const { data: products } = useSupabaseQuery<Product>('q2c_products');
   
   const [selectedCustomer, setSelectedCustomer] = useState(quote?.customerId || '');
   const [items, setItems] = useState<Partial<QuoteItem>[]>(
@@ -88,7 +87,7 @@ export function QuoteForm({ quote, onClose, onSave }: QuoteFormProps) {
       subtotal: calculateSubtotal(),
       tax: calculateTax(),
       total: calculateTotal(),
-      validUntil,
+      validUntil: new Date(validUntil).toISOString(),
       status: 'draft'
     });
   };

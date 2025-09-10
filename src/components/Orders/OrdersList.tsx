@@ -1,18 +1,68 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, Truck, CheckCircle, Trash2 } from 'lucide-react';
 import { Order } from '../../types';
-import { mockOrders } from '../../data/mockData';
 import { Modal } from '../UI/Modal';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
 import { OrderForm } from './OrderForm';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useSupabaseQuery, useSupabaseMutation } from '../../hooks/useSupabase';
 
 export function OrdersList() {
-  const [orders, setOrders] = useLocalStorage<Order[]>('orders', mockOrders);
+  const { data: ordersData, loading, error, refetch } = useSupabaseQuery<any>(
+    'q2c_orders',
+    `
+      *,
+      customer:q2c_customers(*),
+      quote:q2c_quotes(
+        *,
+        items:q2c_quote_items(
+          *,
+          product:q2c_products(*)
+        )
+      )
+    `
+  );
+  const { insert, update, remove, loading: mutationLoading } = useSupabaseMutation('q2c_orders');
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+
+  // Transform Supabase data to match our Order interface
+  const orders: Order[] = ordersData.map((order: any) => ({
+    id: order.id,
+    orderNumber: order.order_number,
+    quoteId: order.quote_id,
+    customerId: order.customer_id,
+    customer: {
+      id: order.customer.id,
+      name: order.customer.name,
+      email: order.customer.email,
+      phone: order.customer.phone,
+      company: order.customer.company,
+      address: order.customer.address,
+      createdAt: order.customer.created_at
+    },
+    items: order.quote.items.map((item: any) => ({
+      id: item.id,
+      productId: item.product_id,
+      product: {
+        id: item.product.id,
+        name: item.product.name,
+        description: item.product.description,
+        price: item.product.price,
+        category: item.product.category,
+        sku: item.product.sku
+      },
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      discount: item.discount,
+      total: item.total
+    })),
+    total: order.total,
+    status: order.status,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at
+  }));
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -35,24 +85,23 @@ export function OrdersList() {
     setShowForm(true);
   };
 
-  const handleSaveOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSaveOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (editingOrder) {
       // Update existing order
-      setOrders(prev => prev.map(o => 
-        o.id === editingOrder.id 
-          ? { ...o, ...orderData, updatedAt: new Date().toISOString() }
-          : o
-      ));
+      await update(editingOrder.id, {
+        status: orderData.status
+      });
     } else {
       // Create new order
-      const newOrder: Order = {
-        id: Date.now().toString(),
-        ...orderData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      setOrders(prev => [...prev, newOrder]);
+      await insert({
+        order_number: orderData.orderNumber,
+        quote_id: orderData.quoteId,
+        customer_id: orderData.customerId,
+        total: orderData.total,
+        status: orderData.status
+      });
     }
+    await refetch();
     setShowForm(false);
     setEditingOrder(null);
   };
@@ -62,21 +111,41 @@ export function OrdersList() {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (orderToDelete) {
-      setOrders(prev => prev.filter(o => o.id !== orderToDelete.id));
+      await remove(orderToDelete.id);
+      await refetch();
       setShowDeleteDialog(false);
       setOrderToDelete(null);
     }
   };
 
-  const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
-    setOrders(prev => prev.map(o => 
-      o.id === orderId 
-        ? { ...o, status: newStatus, updatedAt: new Date().toISOString() }
-        : o
-    ));
+  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+    await update(orderId, { status: newStatus });
+    await refetch();
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800">Error loading orders: {error}</p>
+        <button 
+          onClick={refetch}
+          className="mt-2 text-red-600 hover:text-red-800 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -88,7 +157,8 @@ export function OrdersList() {
           </div>
           <button 
             onClick={handleCreateOrder}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50"
+            disabled={mutationLoading}
           >
             <Plus className="w-4 h-4" />
             <span>New Order</span>
@@ -149,7 +219,7 @@ export function OrdersList() {
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {new Date(order.createdAt).toLocaleDateString()}
+                      {new Date(order.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
