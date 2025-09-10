@@ -50,10 +50,10 @@ function App() {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
         <Header title={pageInfo.title} subtitle={pageInfo.subtitle} />
         
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 pt-24">
           {renderContent()}
         </main>
       </div>
