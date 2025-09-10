@@ -1,16 +1,35 @@
 import React, { useState } from 'react';
-import { Save, User, Building, CreditCard, Bell, Shield } from 'lucide-react';
+import { Save, User, Building, CreditCard, Bell, Shield, Database } from 'lucide-react';
+import { generateSeedData } from '../../utils/seedData';
 
 export function Settings() {
   const [activeSection, setActiveSection] = useState('company');
+  const [isGeneratingSeed, setIsGeneratingSeed] = useState(false);
+  const [seedResult, setSeedResult] = useState<any>(null);
 
   const sections = [
     { id: 'company', label: 'Company Info', icon: Building },
     { id: 'profile', label: 'User Profile', icon: User },
+    { id: 'data', label: 'Data Management', icon: Database },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
   ];
+
+  const handleGenerateSeedData = async () => {
+    setIsGeneratingSeed(true);
+    setSeedResult(null);
+    
+    try {
+      const result = await generateSeedData();
+      setSeedResult(result);
+    } catch (error) {
+      console.error('Failed to generate seed data:', error);
+      setSeedResult({ error: 'Failed to generate seed data' });
+    } finally {
+      setIsGeneratingSeed(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -128,6 +147,47 @@ export function Settings() {
                       <option>Sales Representative</option>
                     </select>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'data' && (
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-900">Data Management</h4>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <h5 className="font-medium text-amber-800 mb-2">Generate Sample Data</h5>
+                  <p className="text-sm text-amber-700 mb-4">
+                    This will populate your database with sample customers, products, quotes, orders, and invoices. 
+                    <strong className="text-amber-800"> Warning: This will clear existing data!</strong>
+                  </p>
+                  <button
+                    onClick={handleGenerateSeedData}
+                    disabled={isGeneratingSeed}
+                    className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    <Database className="w-4 h-4" />
+                    <span>{isGeneratingSeed ? 'Generating...' : 'Generate Sample Data'}</span>
+                  </button>
+                  
+                  {seedResult && (
+                    <div className="mt-4 p-3 bg-white rounded border">
+                      {seedResult.error ? (
+                        <p className="text-red-600 text-sm">{seedResult.error}</p>
+                      ) : (
+                        <div className="text-sm text-green-700">
+                          <p className="font-medium mb-2">✅ Sample data generated successfully!</p>
+                          <ul className="space-y-1">
+                            <li>• {seedResult.customers} customers</li>
+                            <li>• {seedResult.products} products</li>
+                            <li>• {seedResult.quotes} quotes</li>
+                            <li>• {seedResult.quoteItems} quote items</li>
+                            <li>• {seedResult.orders} orders</li>
+                            <li>• {seedResult.invoices} invoices</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
