@@ -38,9 +38,13 @@ function App() {
       />
       
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <Header title="Basirah-Q2C" subtitle="Quote to Cash System" />
+        <Header 
+          title="Basirah-Q2C" 
+          subtitle="Quote to Cash System" 
+          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
         
-        <main className="flex-1 p-6 pt-24">
+        <main className="flex-1 p-6 pt-20">
           {renderContent()}
         </main>
       </div>

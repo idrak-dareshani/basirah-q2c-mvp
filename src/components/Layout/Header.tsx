@@ -1,16 +1,23 @@
 import React from 'react';
-import { Receipt } from 'lucide-react';
+import { Receipt, Menu } from 'lucide-react';
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  onToggleSidebar: () => void;
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title, subtitle, onToggleSidebar }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          <button
+            onClick={onToggleSidebar}
+            className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 flex items-center justify-center"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
             <Receipt className="w-6 h-6 text-white" />
           </div>
