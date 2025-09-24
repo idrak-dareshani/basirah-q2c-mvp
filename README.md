@@ -81,7 +81,3 @@ npm run lint
 ## License
 
 MIT
-
----
-
-For more details, see the source files in [src/](src)
